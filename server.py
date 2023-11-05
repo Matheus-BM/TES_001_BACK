@@ -20,25 +20,35 @@ app.config['MAIL_USE_SSL'] = False
 
 mail = Mail(app)
 
-pub_topic = "ESP32_01/pub"
-sub_topic = "ESP32_01/sub"
+pub_topic = "ESP32_01/sub"
+sub_topic = "ESP32_01/pub"
 
 # Define MQTT client callbacks
 def on_connect(client, userdata, flags, rc, properties=None):
     print("Connected to MQTT broker with result code "+str(rc))
     client.subscribe(sub_topic)
 
-    message = json.dumps({"eventType": "connected", "date_time": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
+    message = json.dumps({"eventType": "connected", "timestamp": datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')})
     print(f'publish: topic: {pub_topic} %s message: {message}')
     client.publish(pub_topic, payload=message, qos=0, retain=False)
 
 def on_message(client, userdata, message):
-    print("Received message on topic "+message.topic+" with payload "+message.payload.decode())
-    payload = json.loads(message.payload.decode())
+    payload = json.loads(message.payload.decode().encode('utf-8').strip())
+    print("Received message on topic "+message.topic+" with payload "+payload.get('username'))
+
+    username =  payload.get('username').strip()
+    # Remove leading and trailing spaces
+    cleaned_data = username.strip()
+
+    # Split the string based on spaces
+    parts = cleaned_data.split()
+
+    # Join the parts to get the desired result
+    result = ' '.join(parts)
 
     with app.app_context():
         msg = Message(subject="Notificação de chegada em sala de aula",
-                    body=f"O {payload.get('message')} chegou em sala de aula",
+                    body=f"O {result} chegou em sala de aula em {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
                     sender="no-reply@example.com",
                     recipients=["me@example.com"])
         
